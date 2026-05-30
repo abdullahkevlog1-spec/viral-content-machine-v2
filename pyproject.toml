@@ -5,7 +5,7 @@ description = "A multi-agent architecture for generating viral content."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-  "crewai",
+  "crewai[google-genai]",
   "langchain-google-genai",
   "supabase",
   "pydantic",
