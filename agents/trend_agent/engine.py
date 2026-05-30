@@ -3,6 +3,7 @@ from typing import Any
 
 from crewai import Agent, Crew, LLM, Process, Task
 from dotenv import load_dotenv
+from pydantic import ValidationError
 
 from agents.trend_agent.tasks import TrendDiscoveryTask
 from schemas.models import TrendData
@@ -57,25 +58,41 @@ def create_trend_crew() -> tuple[Crew, Task]:
     return crew, task
 
 
-def _coerce_trend_data(result: Any, task: Task) -> TrendData:
-    result_pydantic = getattr(result, "pydantic", None)
-    task_output = getattr(task, "output", None)
-    task_pydantic = getattr(task_output, "pydantic", None) if task_output else None
-
-    for candidate in (result_pydantic, task_pydantic):
-        if candidate is None:
-            continue
-        if isinstance(candidate, TrendData):
-            return candidate
+def _try_validate(candidate: Any) -> TrendData | None:
+    if candidate is None:
+        return None
+    if isinstance(candidate, TrendData):
+        return candidate
+    try:
         return TrendData.model_validate(candidate)
+    except ValidationError:
+        return None
+
+
+def _coerce_trend_data(result: Any, task: Task) -> TrendData:
+    task_output = getattr(task, "output", None)
+    candidates = (
+        getattr(result, "pydantic", None),
+        getattr(task_output, "pydantic", None) if task_output else None,
+    )
+
+    for candidate in candidates:
+        trend_data = _try_validate(candidate)
+        if trend_data:
+            return trend_data
 
     to_dict = getattr(result, "to_dict", None)
     if callable(to_dict):
-        return TrendData.model_validate(to_dict())
+        trend_data = _try_validate(to_dict())
+        if trend_data:
+            return trend_data
 
     raw = getattr(result, "raw", None)
     if raw:
-        return TrendData.model_validate_json(raw)
+        try:
+            return TrendData.model_validate_json(raw)
+        except ValidationError as exc:
+            raise ValueError("Trend Agent returned raw output that was not valid TrendData JSON.") from exc
 
     raise ValueError("Trend Agent did not return a valid TrendData payload.")
 
