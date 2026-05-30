@@ -1,4 +1,4 @@
-crewai
+crewai[google-genai]
 langchain-google-genai
 supabase
 pydantic
