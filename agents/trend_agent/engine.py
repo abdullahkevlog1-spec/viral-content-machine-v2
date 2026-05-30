@@ -1,5 +1,11 @@
 import os
+from pathlib import Path
 from typing import Any
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+os.environ["LOCALAPPDATA"] = str(PROJECT_ROOT / ".localappdata")
+os.environ.setdefault("CREWAI_STORAGE_DIR", str(PROJECT_ROOT / ".crewai_storage"))
+os.environ.setdefault("CREWAI_DISABLE_TELEMETRY", "true")
 
 from crewai import Agent, Crew, LLM, Process, Task
 from dotenv import load_dotenv
@@ -8,7 +14,7 @@ from pydantic import ValidationError
 from agents.trend_agent.tasks import TrendDiscoveryTask
 from schemas.models import TrendData
 
-DEFAULT_GEMINI_MODEL = "gemini/gemini-2.0-flash"
+DEFAULT_GEMINI_MODEL = "gemini/gemini-2.5-flash-lite"
 
 
 def create_gemini_llm() -> LLM:
@@ -24,7 +30,7 @@ def create_gemini_llm() -> LLM:
         temperature=0.35,
         max_output_tokens=1024,
         timeout=120,
-        max_retries=2,
+        max_retries=1,
     )
 
 
