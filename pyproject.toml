@@ -1,0 +1,17 @@
+[project]
+name = "viral-content-machine-v2"
+version = "0.1.0"
+description = "A multi-agent architecture for generating viral content."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "crewai",
+  "langchain-google-genai",
+  "supabase",
+  "pydantic",
+  "python-dotenv",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
