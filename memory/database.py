@@ -13,6 +13,13 @@ alter table public.trends
   add column if not exists description text;
 """
 
+TRENDS_INSERT_POLICY_SQL = """
+create policy "Allow trend inserts"
+on public.trends
+for insert
+with check (true);
+"""
+
 
 class SupabaseManager:
     def __init__(self) -> None:
@@ -40,6 +47,13 @@ class SupabaseManager:
                     "Failed to save trend data because the Supabase 'trends' table schema is missing "
                     "one or more TrendData columns. Run this SQL in the Supabase SQL editor:\n"
                     f"{TRENDS_TABLE_SQL.strip()}"
+                ) from exc
+            if "row-level security" in message or "42501" in message:
+                raise RuntimeError(
+                    "Failed to save trend data because Supabase row-level security blocked inserts "
+                    "on the 'trends' table. Either use a service role key in SUPABASE_KEY for backend "
+                    "scripts, or run this SQL in the Supabase SQL editor:\n"
+                    f"{TRENDS_INSERT_POLICY_SQL.strip()}"
                 ) from exc
             raise RuntimeError("Failed to save trend data to Supabase.") from exc
 
