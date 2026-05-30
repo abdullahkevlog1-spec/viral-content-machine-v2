@@ -6,6 +6,13 @@ from supabase import Client, create_client
 
 from schemas.models import TrendData
 
+TRENDS_TABLE_SQL = """
+alter table public.trends
+  add column if not exists velocity integer,
+  add column if not exists opportunity integer,
+  add column if not exists description text;
+"""
+
 
 class SupabaseManager:
     def __init__(self) -> None:
@@ -27,6 +34,13 @@ class SupabaseManager:
             response = self.client.table("trends").insert(data.model_dump()).execute()
             return response.data
         except Exception as exc:
+            message = str(exc)
+            if "PGRST204" in message or "Could not find" in message or "does not exist" in message:
+                raise RuntimeError(
+                    "Failed to save trend data because the Supabase 'trends' table schema is missing "
+                    "one or more TrendData columns. Run this SQL in the Supabase SQL editor:\n"
+                    f"{TRENDS_TABLE_SQL.strip()}"
+                ) from exc
             raise RuntimeError("Failed to save trend data to Supabase.") from exc
 
     def get_latest_trends(self) -> Any:
