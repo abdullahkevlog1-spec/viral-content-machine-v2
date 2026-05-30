@@ -14,9 +14,14 @@ alter table public.trends
 """
 
 TRENDS_INSERT_POLICY_SQL = """
+grant usage on schema public to anon, authenticated;
+grant select, insert on public.trends to anon, authenticated;
+
+drop policy if exists "Allow trend inserts" on public.trends;
 create policy "Allow trend inserts"
 on public.trends
 for insert
+to anon, authenticated
 with check (true);
 """
 
