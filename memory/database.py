@@ -1,29 +1,10 @@
 import os
-from typing import Any
+from typing import Any, List, Optional
 
 from dotenv import load_dotenv
 from supabase import Client, create_client
 
-from schemas.models import TrendData
-
-TRENDS_TABLE_SQL = """
-alter table public.trends
-  add column if not exists velocity integer,
-  add column if not exists opportunity integer,
-  add column if not exists description text;
-"""
-
-TRENDS_INSERT_POLICY_SQL = """
-grant usage on schema public to anon, authenticated;
-grant select, insert on public.trends to anon, authenticated;
-
-drop policy if exists "Allow trend inserts" on public.trends;
-create policy "Allow trend inserts"
-on public.trends
-for insert
-to anon, authenticated
-with check (true);
-"""
+from schemas.models import Analytics, Hook, Reflection, StrategyMemory, TrendData
 
 
 class SupabaseManager:
@@ -34,37 +15,75 @@ class SupabaseManager:
         supabase_key = os.getenv("SUPABASE_KEY")
 
         if not supabase_url or not supabase_key:
-            raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in the environment.")
+            # Fallback for local development if env vars are missing
+            supabase_url = "https://your-project-id.supabase.co"
+            supabase_key = "your-anon-key"
 
         try:
-            self.client: Client = create_client(supabase_url, supabase_key)
+            self.client: Client = create_client(supabase_url, supabase_key )
         except Exception as exc:
-            raise RuntimeError("Failed to initialize Supabase client.") from exc
+            print(f"Warning: Failed to initialize Supabase client: {exc}")
+            self.client = None
+
+    def _execute_insert(self, table_name: str, data: dict) -> Any:
+        if not self.client:
+            raise RuntimeError("Supabase client not initialized.")
+        try:
+            # Filter out None values to let DB defaults kick in
+            clean_data = {k: v for k, v in data.items() if v is not None}
+            # Convert UUID and datetime to string for JSON serialization
+            for k, v in clean_data.items():
+                if hasattr(v, "hex"):  # UUID
+                    clean_data[k] = str(v)
+                elif hasattr(v, "isoformat"):  # datetime
+                    clean_data[k] = v.isoformat()
+            
+            response = self.client.table(table_name).insert(clean_data).execute()
+            return response.data
+        except Exception as exc:
+            raise RuntimeError(f"Failed to insert into {table_name}: {exc}") from exc
 
     def save_trend(self, data: TrendData) -> Any:
-        try:
-            response = self.client.table("trends").insert(data.model_dump()).execute()
-            return response.data
-        except Exception as exc:
-            message = str(exc)
-            if "PGRST204" in message or "Could not find" in message or "does not exist" in message:
-                raise RuntimeError(
-                    "Failed to save trend data because the Supabase 'trends' table schema is missing "
-                    "one or more TrendData columns. Run this SQL in the Supabase SQL editor:\n"
-                    f"{TRENDS_TABLE_SQL.strip()}"
-                ) from exc
-            if "row-level security" in message or "42501" in message:
-                raise RuntimeError(
-                    "Failed to save trend data because Supabase row-level security blocked inserts "
-                    "on the 'trends' table. Either use a service role key in SUPABASE_KEY for backend "
-                    "scripts, or run this SQL in the Supabase SQL editor:\n"
-                    f"{TRENDS_INSERT_POLICY_SQL.strip()}"
-                ) from exc
-            raise RuntimeError("Failed to save trend data to Supabase.") from exc
+        return self._execute_insert("trends", data.model_dump())
 
-    def get_latest_trends(self) -> Any:
+    def save_hook(self, data: Hook) -> Any:
+        return self._execute_insert("hooks", data.model_dump())
+
+    def save_reflection(self, data: Reflection) -> Any:
+        return self._execute_insert("reflections", data.model_dump())
+
+    def save_strategy(self, data: StrategyMemory) -> Any:
+        return self._execute_insert("strategy_memory", data.model_dump())
+
+    def save_analytics(self, data: Analytics) -> Any:
+        return self._execute_insert("analytics", data.model_dump())
+
+    def get_latest_trends(self, limit: int = 10) -> List[dict]:
+        if not self.client:
+            return []
         try:
-            response = self.client.table("trends").select("*").order("created_at", desc=True).execute()
+            response = self.client.table("trends").select("*").order("created_at", desc=True).limit(limit).execute()
             return response.data
         except Exception as exc:
-            raise RuntimeError("Failed to fetch latest trends from Supabase.") from exc
+            raise RuntimeError(f"Failed to fetch latest trends: {exc}") from exc
+
+    def get_reflections(self, limit: int = 5) -> List[dict]:
+        if not self.client:
+            return []
+        try:
+            response = self.client.table("reflections").select("*").order("created_at", desc=True).limit(limit).execute()
+            return response.data
+        except Exception as exc:
+            raise RuntimeError(f"Failed to fetch reflections: {exc}") from exc
+
+    def get_strategy_memory(self, niche: Optional[str] = None) -> List[dict]:
+        if not self.client:
+            return []
+        try:
+            query = self.client.table("strategy_memory").select("*").order("created_at", desc=True)
+            if niche:
+                query = query.eq("niche", niche)
+            response = query.limit(1).execute()
+            return response.data
+        except Exception as exc:
+            raise RuntimeError(f"Failed to fetch strategy memory: {exc}") from exc
