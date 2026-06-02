@@ -35,8 +35,8 @@ class Hook(BaseModel):
 
 class Reflection(BaseModel):
     id: Optional[UUID] = Field(default_factory=uuid4, alias="id")
-    hook_id: UUID
-    performance_score: Optional[int] = Field(None, ge=1, le=100)
+    hook_id: Optional[UUID] = None
+    viral_score: Optional[int] = Field(None, ge=1, le=100)
     lesson: Optional[str] = None
     reasoning_update: Optional[str] = None
     created_at: Optional[datetime] = Field(default_factory=utc_now)
