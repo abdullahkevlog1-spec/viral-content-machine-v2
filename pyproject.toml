@@ -10,8 +10,6 @@ dependencies = [
   "supabase",
   "pydantic",
   "python-dotenv",
-  "langchain-openai",
-  "openai",
 ]
 
 [build-system]
