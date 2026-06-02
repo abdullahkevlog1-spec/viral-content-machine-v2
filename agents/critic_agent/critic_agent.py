@@ -50,7 +50,7 @@ class CriticAgent:
             f"Hook Text: {hook.hook_text}\n"
             f"Emotion: {hook.emotion}\n"
             f"Pattern: {hook.pattern}\n\n"
-            f"Assign a performance_score (1-100). If the score is below 85, provide a detailed 'lesson' on what worked/failed and 'reasoning_update' for why the score is low and how to improve it. "
+            f"Assign a viral_score (1-100). If the score is below 85, provide a detailed 'lesson' on what worked/failed and 'reasoning_update' for why the score is low and how to improve it. "
             f"Output the result strictly in the following JSON format, adhering to the Reflection Pydantic model."
         )
 
