@@ -19,7 +19,7 @@ class TrendDiscoveryTask:
             ),
             expected_output=(
                 "A structured TrendData object with trend_title, trend_summary, source, "
-                "source_url, and niche fields."
+                "source_url, niche, velocity, and opportunity fields."
             ),
             agent=self.agent,
             output_pydantic=TrendData,
