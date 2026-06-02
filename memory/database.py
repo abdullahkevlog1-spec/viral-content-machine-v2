@@ -20,7 +20,7 @@ class SupabaseManager:
             supabase_key = "your-anon-key"
 
         try:
-            self.client: Client = create_client(supabase_url, supabase_key)
+            self.client: Client = create_client(supabase_url, supabase_key )
         except Exception as exc:
             print(f"Warning: Failed to initialize Supabase client: {exc}")
             self.client = None
