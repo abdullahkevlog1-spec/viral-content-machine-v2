@@ -18,8 +18,8 @@ class TrendDiscoveryTask:
                 "opportunity from 0 to 100. Return one concise trend only."
             ),
             expected_output=(
-                "A structured TrendData object with topic, velocity, opportunity, and "
-                "description fields."
+                "A structured TrendData object with trend_title, trend_summary, source, "
+                "source_url, and niche fields."
             ),
             agent=self.agent,
             output_pydantic=TrendData,

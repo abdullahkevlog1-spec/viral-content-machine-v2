@@ -17,21 +17,29 @@ from schemas.models import TrendData
 DEFAULT_GEMINI_MODEL = "gemini/gemini-2.5-flash-lite"
 
 
-def create_gemini_llm() -> LLM:
+def create_llm() -> LLM:
     load_dotenv()
 
-    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY must be set before running the Trend Agent.")
+    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    openai_key = os.getenv("OPENAI_API_KEY")
 
-    return LLM(
-        model=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
-        api_key=api_key,
-        temperature=0.35,
-        max_output_tokens=1024,
-        timeout=120,
-        max_retries=1,
-    )
+    if gemini_key:
+        return LLM(
+            model=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
+            api_key=gemini_key,
+            temperature=0.35,
+            max_output_tokens=1024,
+            timeout=120,
+            max_retries=1,
+        )
+    elif openai_key:
+        return LLM(
+            model="gpt-4.1-mini",
+            api_key=openai_key,
+            temperature=0.35,
+        )
+    else:
+        raise ValueError("GEMINI_API_KEY, GOOGLE_API_KEY, or OPENAI_API_KEY must be set.")
 
 
 def create_trend_agent(llm: LLM | None = None) -> Agent:
@@ -46,7 +54,7 @@ def create_trend_agent(llm: LLM | None = None) -> Agent:
             "tactile, eerie, mechanical, and sensory signals, then turn them into structured "
             "trend intelligence that creators can act on quickly."
         ),
-        llm=llm or create_gemini_llm(),
+        llm=llm or create_llm(),
         verbose=True,
         allow_delegation=False,
     )
