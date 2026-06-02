@@ -3,5 +3,3 @@ langchain-google-genai
 supabase
 pydantic
 python-dotenv
-langchain-openai
-openai
