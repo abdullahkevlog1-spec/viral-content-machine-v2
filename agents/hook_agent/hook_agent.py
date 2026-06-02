@@ -1,14 +1,32 @@
 import json
-from typing import Any
-from crewai import Agent, Task, Crew
-from langchain_openai import ChatOpenAI
+import os
+
+from crewai import Agent, Crew, Task
+from dotenv import load_dotenv
+from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import ValidationError
 
 from schemas.models import Hook, TrendData
 
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
+
+
+def create_gemini_chat_llm(temperature: float = 0.7) -> ChatGoogleGenerativeAI:
+    load_dotenv()
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY must be set before running HookAgent.")
+
+    return ChatGoogleGenerativeAI(
+        model=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL).replace("gemini/", ""),
+        google_api_key=api_key,
+        temperature=temperature,
+    )
+
+
 class HookAgent:
-    def __init__(self):
-        self.llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0.7)
+    def __init__(self, llm: ChatGoogleGenerativeAI | None = None):
+        self.llm = llm or create_gemini_chat_llm(temperature=0.7)
 
     def create_hook_agent(self) -> Agent:
         return Agent(
@@ -20,22 +38,28 @@ class HookAgent:
                 "social media platforms and can tailor hooks to maximize their impact. You strictly adhere "
                 "to the provided emotion and pattern, and ensure your output is always in the specified JSON format."
             ),
+            llm=self.llm,
             allow_delegation=False,
             verbose=True,
         )
 
     def generate_hook(self, trend: TrendData, emotion: str, pattern: str) -> Hook:
         agent = self.create_hook_agent()
+        model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL).replace("gemini/", "")
         task_description = (
             f"Create a viral social media hook for the trend: '{trend.trend_title}'. "
             f"The hook should evoke the emotion: '{emotion}' and follow the pattern: '{pattern}'. "
             f"The hook must be highly engaging and designed to go viral. "
             f"Provide your reasoning for why this hook will be viral. "
             f"Output the result strictly in the following JSON format, adhering to the Hook Pydantic model:\n"
-            f"{{'hook_text': '...', 'emotion': '{emotion}', 'pattern': '{pattern}', 'reasoning': '...', 'model_used': 'gpt-4.1-mini'}}"
+            f"{{'hook_text': '...', 'emotion': '{emotion}', 'pattern': '{pattern}', 'reasoning': '...', 'model_used': '{model_name}'}}"
         )
 
-        task = Task(description=task_description, agent=agent, expected_output="A JSON object following the Hook Pydantic model.")
+        task = Task(
+            description=task_description,
+            agent=agent,
+            expected_output="A JSON object following the Hook Pydantic model.",
+        )
         crew = Crew(agents=[agent], tasks=[task])
         result = crew.kickoff()
 
@@ -48,6 +72,6 @@ class HookAgent:
             parsed_result = json.loads(result_str)
             hook_data = Hook(trend_id=trend.id, **parsed_result)
             return hook_data
-        except (json.JSONDecodeError, ValidationError) as e:
-            print(f"Error parsing hook agent output: {e}")
+        except (json.JSONDecodeError, ValidationError) as exc:
+            print(f"Error parsing hook agent output: {exc}")
             raise
