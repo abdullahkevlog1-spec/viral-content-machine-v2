@@ -21,25 +21,17 @@ def create_llm() -> LLM:
     load_dotenv()
 
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-    openai_key = os.getenv("OPENAI_API_KEY")
+    if not gemini_key:
+        raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY must be set before running TrendAgent.")
 
-    if gemini_key:
-        return LLM(
-            model=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
-            api_key=gemini_key,
-            temperature=0.35,
-            max_output_tokens=1024,
-            timeout=120,
-            max_retries=1,
-        )
-    elif openai_key:
-        return LLM(
-            model="gpt-4.1-mini",
-            api_key=openai_key,
-            temperature=0.35,
-        )
-    else:
-        raise ValueError("GEMINI_API_KEY, GOOGLE_API_KEY, or OPENAI_API_KEY must be set.")
+    return LLM(
+        model=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
+        api_key=gemini_key,
+        temperature=0.35,
+        max_output_tokens=1024,
+        timeout=120,
+        max_retries=1,
+    )
 
 
 def create_trend_agent(llm: LLM | None = None) -> Agent:
