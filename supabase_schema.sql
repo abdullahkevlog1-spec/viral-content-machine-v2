@@ -9,6 +9,8 @@ create table if not exists public.trends (
     source text,
     source_url text,
     niche text,
+    velocity integer default 0 check (velocity >= 0 and velocity <= 100),
+    opportunity integer default 0 check (opportunity >= 0 and opportunity <= 100),
     created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -29,7 +31,7 @@ create table if not exists public.hooks (
 create table if not exists public.reflections (
     id uuid default uuid_generate_v4() primary key,
     hook_id uuid references public.hooks(id) on delete cascade,
-    performance_score integer check (performance_score >= 1 and performance_score <= 100),
+    viral_score integer check (viral_score >= 1 and viral_score <= 100),
     lesson text, -- What worked/failed
     reasoning_update text,
     created_at timestamp with time zone default timezone('utc'::text, now()) not null
