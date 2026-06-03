@@ -43,13 +43,14 @@ class HookAgent:
             verbose=True,
         )
 
-    def generate_hook(self, trend: TrendData, emotion: str, pattern: str) -> Hook:
+    def generate_hook(self, trend: TrendData, emotion: str, pattern: str, platform: str = "general") -> Hook:
         agent = self.create_hook_agent()
         model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL).replace("gemini/", "")
         task_description = (
             f"Create a viral social media hook for the trend: '{trend.trend_title}'. "
             f"The hook should evoke the emotion: '{emotion}' and follow the pattern: '{pattern}'. "
             f"The hook must be highly engaging and designed to go viral. "
+            f"Consider the target platform: {platform}. "\
             f"Provide your reasoning for why this hook will be viral. "
             f"Output the result strictly in the following JSON format, adhering to the Hook Pydantic model:\n"
             f"{{'hook_text': '...', 'emotion': '{emotion}', 'pattern': '{pattern}', 'reasoning': '...', 'model_used': '{model_name}'}}"
