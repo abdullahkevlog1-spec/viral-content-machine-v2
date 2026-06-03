@@ -61,3 +61,17 @@ class Analytics(BaseModel):
     comments: Optional[int] = Field(0, ge=0)
     engagement_rate: Optional[float] = Field(None, ge=0.0)
     created_at: Optional[datetime] = Field(default_factory=utc_now)
+
+
+class Script(BaseModel):
+    id: Optional[UUID] = Field(default_factory=uuid4, alias="id")
+    hook_id: UUID
+    trend_id: UUID
+    script_text: str
+    framework: str
+    platform: str
+    duration_seconds: int
+    scene_count: int
+    reasoning: Optional[str] = None
+    model_used: Optional[str] = None
+    created_at: Optional[datetime] = Field(default_factory=utc_now)

@@ -2,7 +2,7 @@ import os
 from typing import Dict, Any
 from dotenv import load_dotenv
 from crewai import Agent, Crew, Task, LLM
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 
 from schemas.models import Hook, TrendData, Script
 from agents.hook_agent.hook_agent import HookAgent
@@ -12,19 +12,17 @@ class GenerationEngine:
     """
     Handles platform-specific content generation (hooks, scripts, and eventually visuals).
     """
-    def __init__(self):
+    def __init__(self, llm: ChatOpenAI | None = None):
         load_dotenv()
-        self.llm = self._create_llm()
+        self.llm = llm or self._create_llm()
         self.hook_agent = HookAgent(llm=self.llm)
         self.script_agent = ScriptAgent(llm=self.llm)
 
-    def _create_llm(self) -> ChatGoogleGenerativeAI:
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY must be set.")
-        return ChatGoogleGenerativeAI(
-            model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite").replace("gemini/", ""),
-            google_api_key=api_key,
+    def _create_llm(self) -> ChatOpenAI:
+        return ChatOpenAI(
+            model="gpt-4o",
+            api_key=os.getenv("OPENAI_API_KEY"),
+            base_url=os.getenv("OPENAI_API_BASE"),
             temperature=0.7
         )
 

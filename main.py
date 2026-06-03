@@ -33,11 +33,11 @@ def main():
         
         # Save trend to database
         if db_manager.client:
-            db_manager.save_trend(trend)
-            print("Trend saved to Supabase.")
-    except Exception as e:
-        print(f"Trend Discovery failed: {e}")
-        return
+            try:
+                db_manager.save_trend(trend)
+                print("Trend saved to Supabase.")
+            except Exception as db_err:
+                print(f"Database save failed (non-critical): {db_err}")
 
     print("\n--- Phase 2: Content Generation (Hook & Script) ---")
     generation_engine = GenerationEngine()
@@ -71,12 +71,12 @@ def main():
         
         # Save hook and reflection to database
         if db_manager.client:
-            db_manager.save_hook(hook)
-            db_manager.save_reflection(reflection)
-            print("Hook and Reflection saved to Supabase.")
-    except Exception as e:
-        print(f"Hook Critique failed: {e}")
-        return
+            try:
+                db_manager.save_hook(hook)
+                db_manager.save_reflection(reflection)
+                print("Hook and Reflection saved to Supabase.")
+            except Exception as db_err:
+                print(f"Database save failed (non-critical): {db_err}")
 
     print("\n--- Phase 4: Visual Asset Generation (Optional) ---")
     try:
@@ -97,9 +97,12 @@ def main():
         # 2. Update Strategy from Performance
         self_improve_agent = SelfImproveAgent(db_manager)
         perf_strategy = self_improve_agent.update_strategy_from_performance(hook.id, analytics)
-        if perf_strategy:
-            db_manager.save_strategy(perf_strategy)
-            print(f"Strategy reinforced by performance: {perf_strategy.reasoning}")
+        if perf_strategy and db_manager.client:
+            try:
+                db_manager.save_strategy(perf_strategy)
+                print(f"Strategy reinforced by performance: {perf_strategy.reasoning}")
+            except Exception as db_err:
+                print(f"Strategy save failed: {db_err}")
 
         # 3. Batch Update from Reflections (Critic feedback)
         updated_strategies = self_improve_agent.batch_update_strategies(limit=5)

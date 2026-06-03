@@ -7,7 +7,7 @@ class GoogleTrendsScraper:
     Scrapes daily search trends and related queries using pytrends.
     """
     def __init__(self, hl='en-US', tz=360):
-        self.pytrends = TrendReq(hl=hl, tz=tz)
+        self.pytrends = TrendReq(hl=hl, tz=tz, timeout=(10, 25))
 
     def fetch_daily_trends(self, country: str = 'united_states') -> List[Dict[str, Any]]:
         """

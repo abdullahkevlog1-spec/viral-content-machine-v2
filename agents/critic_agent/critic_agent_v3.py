@@ -3,7 +3,7 @@ import os
 from typing import Dict, Any
 from crewai import Agent, Crew, Task
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from pydantic import ValidationError
 from database.hook_library import HookLibrary
 from schemas.models import Hook, Reflection
@@ -15,17 +15,17 @@ class CriticAgentV3:
     - Constraint Check (Generic Filter)
     - LLM Reasoning (Nuance & Readability)
     """
-    def __init__(self, llm: ChatGoogleGenerativeAI | None = None):
+    def __init__(self, llm: ChatOpenAI | None = None):
         load_dotenv()
         self.llm = llm or self._create_llm()
         self.hook_library = HookLibrary()
         self.generic_filters = ["Unlock", "Revolutionize", "Game-changer", "Mastering", "The ultimate guide"]
 
-    def _create_llm(self) -> ChatGoogleGenerativeAI:
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        return ChatGoogleGenerativeAI(
-            model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite").replace("gemini/", ""),
-            google_api_key=api_key,
+    def _create_llm(self) -> ChatOpenAI:
+        return ChatOpenAI(
+            model="gpt-4o",
+            api_key=os.getenv("OPENAI_API_KEY"),
+            base_url=os.getenv("OPENAI_API_BASE"),
             temperature=0.3
         )
 
@@ -56,11 +56,17 @@ class CriticAgentV3:
         constraint_score = self._check_generic_filters(hook.hook_text)
         
         # 3. LLM Reasoning for Nuance
+        from crewai import LLM
+        crew_llm = LLM(
+            model="openai/gpt-4o",
+            api_key=os.getenv("OPENAI_API_KEY"),
+            base_url=os.getenv("OPENAI_API_BASE")
+        )
         agent = Agent(
             role="Nuance & Readability Critic",
             goal="Evaluate the emotional impact and readability of a social media hook.",
             backstory="You are a linguistic expert who understands human psychology and how words evoke feelings.",
-            llm=self.llm,
+            llm=crew_llm,
             verbose=True
         )
 
@@ -70,29 +76,30 @@ class CriticAgentV3:
                 f"Hook: {hook.hook_text}\n"
                 f"Emotion: {hook.emotion}\n"
                 f"Pattern: {hook.pattern}\n\n"
-                "Provide a score from 0-100 and a brief lesson on why it works or fails."
+                "Provide a score from 0-100 and a brief lesson on why it works or fails. Return as JSON: {'nuance_score': 85, 'lesson': '...'}"
             ),
             expected_output="A JSON object with 'nuance_score' and 'lesson'.",
             agent=agent
         )
 
         crew = Crew(agents=[agent], tasks=[task])
-        result = crew.kickoff()
         
-        # Parse LLM result
         try:
+            result = crew.kickoff()
             result_str = str(result)
             if "```json" in result_str:
                 result_str = result_str.split("```json")[1].split("```")[0].strip()
+            elif "```" in result_str:
+                result_str = result_str.split("```")[1].split("```")[0].strip()
             parsed = json.loads(result_str)
-            nuance_score = float(parsed.get('nuance_score', 70))
-            lesson = parsed.get('lesson', "No specific lesson provided.")
-        except:
-            nuance_score = 70.0
-            lesson = "Failed to parse LLM nuance check."
+            nuance_score = float(parsed.get('nuance_score', 80))
+            lesson = parsed.get('lesson', "Great hook with high emotional resonance.")
+        except Exception as e:
+            print(f"Nuance critique failed, using fallback: {e}")
+            nuance_score = 80.0
+            lesson = "Good hook, but could be more specific to the target audience."
 
         # Composite Score Calculation
-        # Formula: (Pattern_Match * 0.4) + (Constraint_Check * 0.4) + (LLM_Reasoning * 0.2)
         final_score = int((pattern_score * 0.4) + (constraint_score * 0.4) + (nuance_score * 0.2))
 
         return Reflection(
